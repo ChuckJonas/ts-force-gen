@@ -392,10 +392,11 @@ export class SObjectGenerator {
     private generateDecorator (decoratorProps: any) {
         let ref = decoratorProps.reference != null ? `()=>{return ${decoratorProps.reference}}` : 'undefined';
         let sfType = decoratorProps.salesforceType ? `${this.mapTypeToEnum(decoratorProps.salesforceType)}` : 'undefined';
+        let label = decoratorProps.salesforceLabel ? decoratorProps.salesforceLabel.replace(/'/g, "\\'") : '';
         return {
             name: `sField`,
             arguments: [
-                `{apiName: '${decoratorProps.apiName}', readOnly: ${decoratorProps.readOnly}, required: ${decoratorProps.required}, reference:${ref}, childRelationship: ${decoratorProps.childRelationship}, salesforceType: ${sfType}, salesforceLabel: '${escape(decoratorProps.salesforceLabel)}'}`
+                `{apiName: '${decoratorProps.apiName}', readOnly: ${decoratorProps.readOnly}, required: ${decoratorProps.required}, reference:${ref}, childRelationship: ${decoratorProps.childRelationship}, salesforceType: ${sfType}, salesforceLabel: '${label}'}`
             ]
         };
     }
