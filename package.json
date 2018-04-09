@@ -1,0 +1,59 @@
+{
+  "name": "ts-force-gen",
+  "version": "0.1.0",
+  "description": "Code generation for ts-force",
+  "main": "build/index.js",
+  "typings": "build/index.d.ts",
+  "bin": {
+    "ts-force-gen": "build/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChuckJonas/ts-force-gen.git"
+  },
+  "keywords": [
+    "salesforce",
+    "typescript",
+    "rest"
+  ],
+  "contributors": [
+    "Charlie Jonas"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -r -f ./build",
+    "clean-build": "npm run clean && npm run build",
+    "link": "npm run clean-build && npm link",
+    "pretest": "npm run clean && tsc",
+    "test": "mocha -r dotenv/config dotenv_config_path=.env.test",
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "mocha-typescript-watch",
+    "prepublishOnly": "npm run clean-build",
+    "generate-test-code": "node -r dotenv/config ./build/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact"
+  },
+  "engines": {
+    "node": ">=4.5"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.0.4",
+    "@types/mocha": "^2.2.43",
+    "@types/nock": "^8.2.1",
+    "@types/node": "^8.0.4",
+    "chai": "^4.1.2",
+    "mocha": "^3.5.2",
+    "mocha-typescript": "^1.1.8",
+    "nock": "^9.0.14",
+    "source-map-support": "^0.4.18",
+    "tslint": "^5.4.3",
+    "tslint-config-standard": "^6.0.1",
+    "typescript": "^2.8.1"
+  },
+  "dependencies": {
+    "ts-force": "^1.0.44",
+    "cli-spinner": "^0.2.6",
+    "dotenv": "^4.0.0",
+    "minimist": "^1.2.0",
+    "ts-simple-ast": "^10.2.0",
+    "tslib": "^1.6.0"
+  }
+}

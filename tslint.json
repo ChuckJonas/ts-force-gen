@@ -1,0 +1,14 @@
+{
+  "extends": "tslint-config-standard",
+  "rules": {
+  "ter-indent": [
+      4,
+      {
+        "SwitchCase": 1
+      }
+    ],
+    "jsdoc-format": false,
+    "no-trailing-whitespace": false,
+    "semicolon": [true, "always"]
+  }
+}
