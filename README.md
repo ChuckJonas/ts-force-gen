@@ -1,6 +1,6 @@
 # ts-force-gen
 
-A command line utility for generating classes to use with [ts-force](https://www.npmjs.com/package/ts-force)
+A command line utility for generating SObject classes to use with [ts-force](https://www.npmjs.com/package/ts-force)
 
 `npm install ts-force-gen`
 
