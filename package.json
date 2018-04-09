@@ -1,6 +1,6 @@
 {
   "name": "ts-force-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Code generation for ts-force",
   "main": "build/index.js",
   "typings": "build/index.d.ts",
@@ -19,7 +19,7 @@
   "contributors": [
     "Charlie Jonas"
   ],
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "scripts": {
     "clean": "rm -r -f ./build",
     "clean-build": "npm run clean && npm run build",
@@ -49,7 +49,7 @@
     "typescript": "^2.8.1"
   },
   "dependencies": {
-    "ts-force": "^1.0.44",
+    "ts-force": "^1.0.45",
     "cli-spinner": "^0.2.6",
     "dotenv": "^4.0.0",
     "minimist": "^1.2.0",
