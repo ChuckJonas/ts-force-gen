@@ -1,5 +1,9 @@
 # ts-force-gen
 
+[![alt text](https://travis-ci.org/ChuckJonas/ts-force-gen.svg?branch=master)](https://travis-ci.org/ChuckJonas/ts-force-gen)
+[![alt text](https://img.shields.io/npm/v/ts-force-gen.svg)](https://www.npmjs.com/package/ts-force-gen)
+[![alt text](https://img.shields.io/badge/license-BSD--3--CLAUSE-blue.svg)](https://github.com/ChuckJonas/ts-force-gen/blob/master/LICENSE)
+
 A command line utility for generating SObject classes to use with [ts-force](https://www.npmjs.com/package/ts-force)
 
 `npm install ts-force-gen`
@@ -68,6 +72,24 @@ You can also pass the access token and instance url in directly
   },
 ```
 
+*enviroment configuration:*
+
+You can also authinicate via Username/Password via enviroment variables by setting the `-e` flag (helpful for CI or build processes):
+
+`ts-force-gen -e -o 'Account,Contact'`
+
+The following variables must be set on in your enviroment:
+
+```bat
+
+CLIENT_ID =
+CLIENT_SECRET =
+USERNAME =
+PASSWORD =
+HOST =
+
+```
+
 #### Commandline Args
 
 Most args can also be passed in directly via the command line.  Config File & args will be merged with args taking presidence.
@@ -112,4 +134,10 @@ HOST =
 
 ```
 
-Then run `npm test`
+***WARNING: TESTS WILL RUN DML IN THIS ORG!!!! While they attempt to reset state after complete, failed tests could result in test data being left behind ***
+
+Then run:
+
+- `npm run build`: to make sure the program is built
+- `npm run generate-test-code`: to generated classes which are used in the tests
+- `npm test`:to run tests which assert the generated classes are valid & working
