@@ -26,7 +26,7 @@ A json configuration file can be passed in via the `--config|c` arg:
 
 *Username/Pass configuration:*
 
-```json
+``` json
 {
   "auth": {
     "username": "john@example.com",
@@ -55,7 +55,7 @@ A json configuration file can be passed in via the `--config|c` arg:
 
 If you only pass the `username`, the code generator will attempt to auth using `sfdx force:org:display -u [username]` (this means you can also pass the org alias).
 
-```json
+``` json
 "auth": {
     "username": "john@example.com",
   },
@@ -65,7 +65,7 @@ If you only pass the `username`, the code generator will attempt to auth using `
 
 You can also pass the access token and instance url in directly
 
-```json
+``` json
 "auth": {
     "accessToken": "12312321",
     "instanceUrl": "https://na31.salesforce.com",
