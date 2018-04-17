@@ -103,6 +103,7 @@ Most args can also be passed in directly via the command line.  Config File & ar
 - `--sobs|-s`: list of comma seperated sobs to generate classes for
 - `--outputFile|-o`: where to save the output
 - `--config|-j`: path to config JSON file.  If specified, all above args will pull from file instead
+- `-e`: authinicate using .env vars
 
 #### generated classes
 
