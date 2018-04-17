@@ -2,10 +2,10 @@
   "name": "ts-force-gen",
   "version": "0.1.3",
   "description": "Code generation for ts-force",
-  "main": "build/src/index.js",
-  "typings": "build/src/index.d.ts",
+  "main": "build/index.js",
+  "typings": "build/index.d.ts",
   "bin": {
-    "ts-force-gen": "build/src/index.js"
+    "ts-force-gen": "build/index.js"
   },
   "repository": {
     "type": "git",
@@ -24,12 +24,12 @@
     "clean": "rm -r -f ./build",
     "clean-build": "npm run clean && npm run build",
     "link": "npm run clean-build && npm link",
-    "pretest": "npm run clean && tsc",
+    "pretest": "npm run clean && npm run build",
     "test": "mocha -r dotenv/config dotenv_config_path=.env.test --timeout 100000",
     "build": "tsc -p tsconfig.build.json",
     "watch": "mocha-typescript-watch",
     "prepublishOnly": "npm run clean-build",
-    "generate-test-code": "node -r dotenv/config ./build/src/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact"
+    "generate-test-code": "node -r dotenv/config ./build/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact"
   },
   "engines": {
     "node": ">=4.5"
