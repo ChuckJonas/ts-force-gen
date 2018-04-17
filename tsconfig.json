@@ -19,9 +19,6 @@
       "node"
     ],
     "baseUrl": ".", // required for "paths"
-    "paths": {
-      "type-force": ["src/index.ts"] // write tests without relative paths
-    }
   },
   "include": [
     "src/**/*.ts",
