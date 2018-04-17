@@ -25,11 +25,12 @@
     "clean-build": "npm run clean && npm run build",
     "link": "npm run clean-build && npm link",
     "pretest": "npm run clean && tsc",
-    "test": "mocha -r dotenv/config dotenv_config_path=.env.test",
+    "test": "mocha -r dotenv/config dotenv_config_path=.env.test --timeout 100000",
     "build": "tsc -p tsconfig.build.json",
     "watch": "mocha-typescript-watch",
     "prepublishOnly": "npm run clean-build",
-    "generate-test-code": "node -r dotenv/config ./build/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact"
+    "generate-test-code": "node -r dotenv/config ./build/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact",
+    "generate-test-ci": "ts-force-gen -e -o ./test/generatedSobs.ts -s Account,Contact"
   },
   "engines": {
     "node": ">=4.5"

@@ -1,3 +1,6 @@
 language: node_js
 node_js:
-  - "stable"
+    - "stable"
+script:
+    - npm run generate-test-ci
+    - npm test

@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 /// <reference types="node" />
-import { BaseConfig, OAuth, Rest, UsernamePasswordConfig } from 'ts-force';
+import { BaseConfig, OAuth, Rest, UsernamePasswordConfig, setDefaultConfig } from 'ts-force';
 import Ast from 'ts-simple-ast';
 import { SObjectGenerator } from './sObjectGenerator';
 import * as minimist from 'minimist';
@@ -114,8 +114,7 @@ async function generateLoadConfig (): Promise<Config> {
     }
 
     // could also retrieve this using sfdx
-    Rest.config = config.auth;
-    Rest.config.version = 40; // should be moved to config
+    setDefaultConfig(config.auth);
 
     return config;
 

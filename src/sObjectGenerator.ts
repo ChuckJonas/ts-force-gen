@@ -11,6 +11,8 @@ export class SObjectGenerator {
     public sourceFile: SourceFile;
     public spinner: any;
 
+    private client;
+
     /**
     * Generates RestObject Concrete types
     * @param {SourceFile} sourceFile: Location to save the files
@@ -21,6 +23,7 @@ export class SObjectGenerator {
         this.sObjectConfigs = sObjectConfigs;
         this.classInterfaceMap = new Map<string,string>();
         this.sourceFile = sourceFile;
+        this.client = new Rest();
     }
 
     public async generateFile () {
@@ -207,7 +210,7 @@ export class SObjectGenerator {
     }
 
     private async retrieveDescribe (apiName: string): Promise<SObjectDescribe> {
-        return await Rest.Instance.getSObjectDescribe(apiName);
+        return await this.client.getSObjectDescribe(apiName);
     }
 
     private generatePropInterfaceName (className: string) {
