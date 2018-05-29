@@ -166,6 +166,13 @@ export class SObjectGenerator {
             docs: [{description: `Immutable Property Interface for ${className}` }]
         });
 
+        propsInterface.addProperty({
+            name: '_TYPE_',
+            isReadonly: true,
+            hasQuestionToken: true,
+            type: `'${apiName}'`
+        });
+
         properties.forEach(prop => {
             // this is quite hackish and should be refactored ASAP
             let isArr = false;
@@ -181,12 +188,6 @@ export class SObjectGenerator {
                 isReadonly: true,
                 hasQuestionToken: true
             });
-        });
-
-        propsInterface.addProperty({
-            name: '_TYPE_',
-            isReadonly: true,
-            type: `'${apiName}'`
         });
 
         propsInterface.forget();
