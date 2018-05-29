@@ -90,7 +90,7 @@ export class SObjectGenerator {
 
         let className = this.sanatizeClassName(sobConfig);
 
-        this.generateInterface(className, props);
+        this.generateInterface(className, props, sobConfig.apiName);
 
         let classDeclaration = this.generateClass(sobConfig, className, props);
 
@@ -98,6 +98,13 @@ export class SObjectGenerator {
             name: 'API_NAME',
             scope: Scope.Public,
             isStatic: true,
+            type: `'${sobConfig.apiName}'`,
+            initializer: `'${sobConfig.apiName}'`
+        });
+
+        classDeclaration.addProperty({
+            name: '_TYPE_',
+            scope: Scope.Public,
             type: `'${sobConfig.apiName}'`,
             initializer: `'${sobConfig.apiName}'`
         });
@@ -152,7 +159,7 @@ export class SObjectGenerator {
 
     }
 
-    private generateInterface (className: string, properties: PropertyDeclarationStructure[]) {
+    private generateInterface (className: string, properties: PropertyDeclarationStructure[], apiName: string) {
         let propsInterface = this.sourceFile.addInterface({
             name: this.classInterfaceMap.get(className),
             isExported: true,
@@ -175,6 +182,13 @@ export class SObjectGenerator {
                 hasQuestionToken: true
             });
         });
+
+        propsInterface.addProperty({
+            name: '_TYPE_',
+            isReadonly: true,
+            type: `'${apiName}'`
+        });
+
         propsInterface.forget();
     }
 
