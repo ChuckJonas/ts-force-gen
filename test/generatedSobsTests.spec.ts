@@ -4,6 +4,7 @@ import { suite, test, slow, timeout } from 'mocha-typescript';
 import { should, assert, expect } from 'chai';
 import { Account, Contact } from './generatedSobs';
 import { CompositeCollection } from 'ts-force';
+import { cleanAPIName } from '../src/util';
 
 @suite class PasswordConfigTest {
      async before () {
@@ -11,6 +12,12 @@ import { CompositeCollection } from 'ts-force';
         let oAuth = new OAuth(passwordConfig);
         setDefaultConfig(await oAuth.initialize());
 
+    }
+
+    @test async 'RestObject: Sanitize Names' () {
+        expect(cleanAPIName('My_Test_Object__c')).to.equal('MyTestObject');
+        expect(cleanAPIName('My_Test_Relation__r')).to.equal('MyTestRelation');
+        expect(cleanAPIName('My__Test_Object__r')).to.equal('MyTestObject');
     }
 
     @test async 'RestObject: DML End-to-End' () {
