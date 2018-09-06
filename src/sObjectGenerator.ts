@@ -398,6 +398,7 @@ export class SObjectGenerator {
             apiName: field.name,
             readOnly: field.updateable === false && field.createable === false,
             required: (field.createable || field.updateable) && field.nillable === false,
+            externalId: field.externalId,
             childRelationship: false,
             reference: null,
             salesforceLabel: field.label,
@@ -414,7 +415,7 @@ export class SObjectGenerator {
         return {
             name: `sField`,
             arguments: [
-                `{apiName: '${decoratorProps.apiName}', readOnly: ${decoratorProps.readOnly}, required: ${decoratorProps.required}, reference:${ref}, childRelationship: ${decoratorProps.childRelationship}, salesforceType: ${sfType}, salesforceLabel: '${label}'}`
+                `{apiName: '${decoratorProps.apiName}', readOnly: ${decoratorProps.readOnly}, required: ${decoratorProps.required}, reference:${ref}, childRelationship: ${decoratorProps.childRelationship}, salesforceType: ${sfType}, salesforceLabel: '${label}', externalId: ${decoratorProps.externalId}}`
             ]
         };
     }
