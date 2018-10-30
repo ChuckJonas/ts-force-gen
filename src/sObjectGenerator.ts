@@ -1,10 +1,23 @@
 import { Scope, SourceFile, PropertyDeclarationStructure, ParameterDeclaration, DecoratorStructure, JSDocStructure, ClassDeclaration } from 'ts-simple-ast';
-import { Field, SObjectDescribe, ChildRelationship, Rest, RestObject, SalesforceFieldType, SFieldProperties } from 'ts-force';
+import { Field, SObjectDescribe, ChildRelationship, Rest, RestObject, SalesforceFieldType, SFieldProperties, sField } from 'ts-force';
 import { Spinner } from 'cli-spinner';
 import { SObjectConfig, FieldMapping } from './sObjectConfig';
 import { cleanAPIName } from './util';
 
 const superClass = 'RestObject';
+
+interface SalesforceDecoratorProps {
+    apiName: string;
+    createable: boolean;
+    updateable: boolean;
+    required: boolean;
+    externalId: boolean;
+    childRelationship: boolean;
+    reference: any;
+    salesforceLabel: string;
+    salesforceType: SalesforceFieldType;
+}
+
 export class SObjectGenerator {
 
     public sObjectConfigs: SObjectConfig[];
@@ -177,8 +190,8 @@ export class SObjectGenerator {
         properties.forEach(prop => {
             // this is quite hackish and should be refactored ASAP
             let isArr = false;
-            let pType = prop.type;
-            if (prop.type.indexOf('[]') > -1) {
+            let pType = prop.type as string;
+            if (pType.indexOf('[]') > -1) {
                 isArr = true;
                 pType = pType.replace('[]','');
             }
@@ -275,12 +288,16 @@ export class SObjectGenerator {
 
                 let referenceClass = this.sanitizeClassName(this.sObjectConfigs[relatedSobIndex]);
 
-                let decoratorProps = {
+                let decoratorProps: SalesforceDecoratorProps = {
                     apiName: child.relationshipName,
-                    readOnly: true,
                     required: false,
+                    createable: false,
+                    updateable: false,
                     childRelationship: true,
-                    reference: referenceClass
+                    reference: referenceClass,
+                    externalId: false,
+                    salesforceLabel: child.relationshipName,
+                    salesforceType: SalesforceFieldType.REFERENCE
                 };
 
                 props.push({
@@ -330,12 +347,16 @@ export class SObjectGenerator {
                         referenceClass = this.sanitizeClassName(this.sObjectConfigs[relatedSobIndex]);
                     }
 
-                    let decoratorProps = {
+                    let decoratorProps: SalesforceDecoratorProps = {
                         apiName: field.relationshipName,
-                        readOnly: true,
                         required: false,
+                        createable: false,
+                        updateable: false,
                         childRelationship: false,
-                        reference: referenceClass
+                        reference: referenceClass,
+                        externalId: false,
+                        salesforceLabel: field.label,
+                        salesforceType: SalesforceFieldType.REFERENCE
                     };
 
                     props.push({
@@ -396,7 +417,8 @@ export class SObjectGenerator {
     private getDecorator (field: Field): DecoratorStructure {
         let decoratorProps = {
             apiName: field.name,
-            readOnly: field.updateable === false && field.createable === false,
+            createable: field.createable,
+            updateable: field.updateable,
             required: (field.createable || field.updateable) && field.nillable === false,
             externalId: field.externalId,
             childRelationship: false,
@@ -408,16 +430,38 @@ export class SObjectGenerator {
         return this.generateDecorator(decoratorProps);
     }
 
-    private generateDecorator (decoratorProps: any) {
+    private generateDecorator (decoratorProps: SalesforceDecoratorProps) {
         let ref = decoratorProps.reference != null ? `()=>{return ${decoratorProps.reference}}` : 'undefined';
         let sfType = decoratorProps.salesforceType ? `${this.mapTypeToEnum(decoratorProps.salesforceType)}` : 'undefined';
         let label = decoratorProps.salesforceLabel ? decoratorProps.salesforceLabel.replace(/'/g, "\\'") : '';
+
+        //  type ExchangeRates =
+        let props: {
+            [P in keyof Omit<SFieldProperties, 'toString'>]: string;
+        } = {
+            apiName: `'${decoratorProps.apiName}'`,
+            createable: `${decoratorProps.createable}`,
+            updateable: `${decoratorProps.updateable}`,
+            required: `${decoratorProps.required}`,
+            reference: `${ref}`,
+            childRelationship: `${decoratorProps.childRelationship}`,
+            salesforceType: `${sfType}`,
+            salesforceLabel: `'${label}'`,
+            externalId: `${decoratorProps.externalId}`
+        };
+
+        let propsString = Object.keys(props).map(key => {
+            return `${key}: ${props[key]}`;
+        }).join(', ');
+
         return {
             name: `sField`,
             arguments: [
-                `{apiName: '${decoratorProps.apiName}', readOnly: ${decoratorProps.readOnly}, required: ${decoratorProps.required}, reference:${ref}, childRelationship: ${decoratorProps.childRelationship}, salesforceType: ${sfType}, salesforceLabel: '${label}', externalId: ${decoratorProps.externalId}}`
+                `{${propsString}}`
             ]
         };
     }
 
 }
+
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;

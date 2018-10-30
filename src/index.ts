@@ -4,7 +4,6 @@ import { BaseConfig, OAuth, Rest, UsernamePasswordConfig, setDefaultConfig } fro
 import Ast from 'ts-simple-ast';
 import { SObjectGenerator } from './sObjectGenerator';
 import * as minimist from 'minimist';
-import * as path from 'path';
 import * as fs from 'fs';
 import { SObjectConfig } from './sObjectConfig';
 
@@ -109,7 +108,7 @@ async function generateLoadConfig (): Promise<Config> {
             await oAuth.initialize();
             config.auth = oAuth;
         }else {
-            throw new Error('No valid authinication configuration found!');
+            throw new Error('No valid authentication configuration found!');
         }
     }
 
