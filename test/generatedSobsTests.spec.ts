@@ -1,9 +1,8 @@
 // tslint:disable:no-unused-expression
-import { UsernamePasswordConfig, setDefaultConfig, OAuth } from 'ts-force';
+import { UsernamePasswordConfig, setDefaultConfig, OAuth, CompositeCollection } from 'ts-force';
 import { suite, test, slow, timeout } from 'mocha-typescript';
 import { should, assert, expect } from 'chai';
 import { Account, Contact } from './generatedSobs';
-import { CompositeCollection } from 'ts-force';
 import { cleanAPIName } from '../src/util';
 
 @suite class PasswordConfigTest {

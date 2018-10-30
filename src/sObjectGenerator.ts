@@ -130,7 +130,7 @@ export class SObjectGenerator {
             type: `{[P in keyof ${this.classInterfaceMap.get(className)}]: SFieldProperties;}`
         });
 
-        let abc = classDeclaration.addGetAccessor({
+        classDeclaration.addGetAccessor({
             name: 'FIELDS',
             scope: Scope.Public,
             isStatic: true,
@@ -160,15 +160,6 @@ export class SObjectGenerator {
             bodyText: `return new ${className}().mapFromQuery(sob);`
         });
 
-        const immutableMethod = classDeclaration.addMethod({
-            name: 'toImmutable',
-            scope: Scope.Public,
-            returnType: this.classInterfaceMap.get(className)
-        });
-
-        immutableMethod.setBodyText(
-            `return this.clone();`
-        );
         classDeclaration.forget();
 
     }
