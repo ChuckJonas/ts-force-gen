@@ -19,6 +19,29 @@ import { cleanAPIName } from '../src/util';
         expect(cleanAPIName('My__Test_Object__r')).to.equal('MyTestObject');
     }
 
+    @test async 'RestObject: Parent Relationship' () {
+        let acc = new Account({
+            name: 'test account',
+            website: 'example.com'
+        });
+        await acc.insert();
+        expect(acc.id).to.not.be.null;
+
+        let contact = new Contact({
+            accountId: acc.id,
+            firstName: `test`,
+            lastName: `contact`
+        });
+        await contact.insert();
+
+        let contact2 = (await Contact.retrieve(`SELECT ${Contact.FIELDS.name}, ${Contact.FIELDS.account}.${Account.FIELDS.website} FROM ${Contact.API_NAME} WHERE Id = '${contact.id}'`))[0];
+
+        expect(contact2.account).to.not.be.null;
+        expect(contact2.account.website).to.equal(acc.website);
+
+        await acc.delete();
+    }
+
     @test async 'RestObject: DML End-to-End' () {
         let acc = new Account({
             name: 'test account'
@@ -39,15 +62,38 @@ import { cleanAPIName } from '../src/util';
         expect(accounts.length).to.equal(0);
     }
 
+    @test async 'RestObject: Stale Memory' () {
+        let acc = new Account({
+            name: 'stale name'
+        });
+        await acc.insert();
+        expect(acc.id).to.not.be.null;
+
+        let acc2 = (await Account.retrieve(`SELECT Id, Name FROM Account WHERE Id = '${acc.id}'`))[0];
+        acc2.name = 'new name';
+        await acc2.update();
+
+        // should not update in memory values which haven't been explicitly set!
+        acc.website = 'example.com';
+        await acc.update();
+
+        let acc3 = (await Account.retrieve(`SELECT Name, Website FROM Account WHERE Id = '${acc.id}'`))[0];
+
+        expect(acc3.website).to.equal(acc.website);
+        expect(acc3.name).to.equal(acc2.name);
+
+        await acc.delete();
+    }
+
     @test async 'RestObject: refresh' () {
         let acc = new Account({
             name: 'test account',
             website: 'www.facepamplet.com'
         });
         await acc.insert();
-
-        let acc2 = (await Account.retrieve(`SELECT Id FROM Account WHERE Id = '${acc.id}'`))[0];
-        acc.name = 'test name 2';
+        let acc2 = (await Account.retrieve(`SELECT Id, Name FROM Account WHERE Id = '${acc.id}'`))[0];
+        acc2.name = 'test name 2';
+        acc2.billingCity = '23';
         await acc2.update(true);
 
         expect(acc2.website).to.equal(acc.website);
