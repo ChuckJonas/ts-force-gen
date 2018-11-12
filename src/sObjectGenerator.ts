@@ -1,7 +1,8 @@
-import { Scope, SourceFile, PropertyDeclarationStructure, ParameterDeclaration, DecoratorStructure, JSDocStructure, ClassDeclaration } from 'ts-simple-ast';
-import { Field, SObjectDescribe, ChildRelationship, Rest, RestObject, SalesforceFieldType, SFieldProperties, sField } from 'ts-force';
 import { Spinner } from 'cli-spinner';
-import { SObjectConfig, FieldMapping } from './sObjectConfig';
+import { ChildRelationship, Field, Rest, SalesforceFieldType, SFieldProperties, SObjectDescribe } from 'ts-force';
+import { ClassDeclaration, DecoratorStructure, JSDocStructure, PropertyDeclarationStructure, Scope, SourceFile } from 'ts-simple-ast';
+
+import { SObjectConfig } from './sObjectConfig';
 import { cleanAPIName } from './util';
 
 const superClass = 'RestObject';
@@ -58,12 +59,16 @@ export class SObjectGenerator {
         this.sourceFile.addImportDeclaration({
             moduleSpecifier: 'ts-force',
             namedImports: [
+                { name: 'Rest' },
                 { name: 'RestObject' },
                 { name: 'SObject' },
                 { name: 'sField' },
                 { name: 'SalesforceFieldType' },
                 { name: 'SFLocation' },
-                { name: 'SFieldProperties' }
+                { name: 'SFieldProperties' },
+                { name: 'FieldResolver' },
+                { name: 'SOQLQueryParams' },
+                { name: 'buildQuery' }
             ]
         });
 
@@ -142,11 +147,14 @@ export class SObjectGenerator {
             isStatic: true,
             scope: Scope.Public,
             parameters: [
-                { name: 'qry', type: 'string' }
+                { name: 'qryParam', type: `((fields: FieldResolver<${className}>) => SOQLQueryParams) | string` }
             ],
             returnType: `Promise<${className}[]>`,
             isAsync: true,
-            bodyText: `return await ${superClass}.query<${className}>(${className}, qry);`
+            bodyText: `
+            let qry = typeof qryParam === 'function' ? buildQuery(${className}, qryParam) : qryParam;
+            return await ${superClass}.query<${className}>(${className}, qry);
+            `
         });
 
         const fromSfMethod = classDeclaration.addMethod({
@@ -212,9 +220,14 @@ export class SObjectGenerator {
 
         const interfaceParamName = 'fields';
         const constr = classDeclaration.addConstructor();
-        const param = constr.addParameter({
+        constr.addParameter({
             name: interfaceParamName,
             type: propInterfaceName,
+            hasQuestionToken: true
+        });
+        constr.addParameter({
+            name: 'client',
+            type: 'Rest',
             hasQuestionToken: true
         });
 
@@ -222,9 +235,12 @@ export class SObjectGenerator {
             return `this.${prop.name} = void 0;`;
         }).join('\n');
 
-        constr.setBodyText(`super('${sobConfig.apiName}');
-        ${propsInit}
-        Object.assign(this,${interfaceParamName})`);
+        let constructorBody = `super('${sobConfig.apiName}', client);
+                            ${propsInit}
+                            Object.assign(this,${interfaceParamName});
+                            return new Proxy(this, this.safeUpdateProxyHandler);`;
+
+        constr.setBodyText(constructorBody);
 
         return classDeclaration;
     }
