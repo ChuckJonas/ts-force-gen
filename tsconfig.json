@@ -1,16 +1,17 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es6",
     "outDir": "build",
     "moduleResolution": "node",
     "module": "commonjs",
     "declaration": true,
     "importHelpers": true,
-    "inlineSourceMap": true,
     "listFiles": false,
     "traceResolution": false,
     "experimentalDecorators": true,
     "strictNullChecks": false,
+    "downlevelIteration": true,
+    "sourceMap": true,
     "pretty": true,
     "lib" : [
       "es6"

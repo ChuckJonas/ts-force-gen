@@ -1,6 +1,6 @@
 {
   "name": "ts-force-gen",
-  "version": "2.0.1",
+  "version": "2.1.1",
   "description": "Code generation for ts-force",
   "main": "build/index.js",
   "typings": "build/index.d.ts",
@@ -29,13 +29,14 @@
     "build": "tsc -p tsconfig.build.json",
     "watch": "mocha-typescript-watch",
     "prepublishOnly": "npm run clean-build",
-    "generate-test-code": "node -r dotenv/config ./build/index.js dotenv_config_path=.env.test  -e -o ./test/generatedSobs.ts -s Account,Contact,AccountHistory"
+    "generate-test-code": "node -r dotenv/config ./build/index.js -e -o ./test/generated -s Account,Contact,AccountHistory"
   },
   "engines": {
     "node": ">=4.5"
   },
   "devDependencies": {
     "@types/chai": "^4.0.4",
+    "@types/cli-spinner": "^0.2.0",
     "@types/mocha": "^2.2.43",
     "@types/nock": "^8.2.1",
     "@types/node": "^8.0.4",
@@ -53,7 +54,7 @@
     "cli-spinner": "^0.2.8",
     "dotenv": "^4.0.0",
     "minimist": "^1.2.0",
-    "ts-force": "^2.0.3",
+    "ts-force": "^2.1.0",
     "ts-simple-ast": "^18.0.0",
     "tslib": "^1.6.0"
   }

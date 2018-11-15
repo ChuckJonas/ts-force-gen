@@ -1,5 +1,6 @@
 export interface SObjectConfig {
     apiName: string;
+    className: string
     fieldMappings?: FieldMapping[];
     autoConvertNames?: boolean;
 }

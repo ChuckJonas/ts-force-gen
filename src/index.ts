@@ -1,11 +1,14 @@
 #! /usr/bin/env node
 /// <reference types="node" />
 import { BaseConfig, OAuth, Rest, UsernamePasswordConfig, setDefaultConfig } from 'ts-force';
-import Ast from 'ts-simple-ast';
-import { SObjectGenerator } from './sObjectGenerator';
+import Ast, { SourceFile } from 'ts-simple-ast';
+import { SObjectGenerator, TS_FORCE_IMPORTS } from './sObjectGenerator';
 import * as minimist from 'minimist';
 import * as fs from 'fs';
+import * as path from 'path';
 import { SObjectConfig } from './sObjectConfig';
+import { cleanAPIName, replaceSource } from './util';
+import { Spinner } from 'cli-spinner';
 
 interface AuthConfig extends BaseConfig {
     username?: string;
@@ -123,47 +126,108 @@ async function generateLoadConfig (): Promise<Config> {
 
 }
 
-function generate (config: Config) {
+async function generate (config: Config) {
+
+    let spinner = new Spinner({
+        text: 'warming up...',
+        stream: process.stderr,
+        onTick: function (msg) {
+            this.clearLine(this.stream);
+            this.stream.write(msg);
+        }
+    });
+    spinner.setSpinnerString(5);
+    spinner.setSpinnerDelay(20);
+    spinner.start();
+
     const ast = new Ast();
     let save = true;
     if (config.outPath == null) {
         config.outPath = './placeholder.ts';
         save = false;
     }
-    try {
-        fs.unlinkSync(config.outPath);
-    }catch (e) {}
 
-    const source = ast.createSourceFile(config.outPath);
+    let singleFileMode = false;
+    if (config.outPath.endsWith('.ts')) {
+        singleFileMode = true;
+    }
 
     let sobConfigs = config.sObjects.map(item => {
+        let objConfig: SObjectConfig;
         if (typeof item === 'string') {
-            return {
+            objConfig = {
                 apiName: item,
+                className: null,
                 autoConvertNames: true
             };
-        }
-        if (item.autoConvertNames === undefined) {
-            item.autoConvertNames = true;
-        }
-        return item;
-    });
-
-    let gen = new SObjectGenerator(
-        source,
-        sobConfigs
-    );
-
-    gen.generateFile().then(() => {
-        source.formatText();
-
-        if (save) {
-            source.save();
         }else {
-            console.log(source.getText());
+            objConfig = item;
         }
-    }).catch(error => {
-        console.log(error);
-        process.exit(1);
+
+        objConfig.autoConvertNames = objConfig.autoConvertNames || true;
+        objConfig.className = objConfig.className || sanitizeClassName(objConfig);
+
+        return objConfig;
     });
+
+    let index: SourceFile;
+    if (singleFileMode) {
+        index = replaceSource(config.outPath);
+        index.addImportDeclaration(TS_FORCE_IMPORTS);
+    }else {
+        // create index so we can easily import
+        let indexPath = path.join(config.outPath, 'index.ts');
+        index = replaceSource(indexPath);
+    }
+
+    for (let sobConfig of sobConfigs) {
+        spinner.setSpinnerTitle(`Generating: ${sobConfig.apiName}`);
+
+        let classSource: string | SourceFile;
+        if (singleFileMode) {
+            classSource = index;
+        }else {
+            index.addExportDeclaration({
+                moduleSpecifier: `./${sobConfig.className}`
+            });
+            classSource = path.join(config.outPath,`${sobConfig.className}.ts`);
+        }
+
+        let gen = new SObjectGenerator(
+            classSource,
+            sobConfig,
+            sobConfigs
+        );
+        try {
+            let source = await gen.generateFile();
+
+            if (!singleFileMode) {
+                source.formatText();
+                if (save) {
+                    await source.save();
+                }else {
+                    console.log(source.getText());
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            process.exit(1);
+        }
+    }
+
+    index.formatText();
+    if (save) {
+        await index.save();
+    }else {
+        console.log(index.getText());
+    }
+    spinner.stop();
+
+}
+
+function sanitizeClassName (sobConfig: SObjectConfig): string {
+    if (sobConfig.autoConvertNames) {
+        return cleanAPIName(sobConfig.apiName);
+    }
+    return sobConfig.apiName;
 }

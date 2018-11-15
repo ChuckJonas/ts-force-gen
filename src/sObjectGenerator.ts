@@ -1,11 +1,28 @@
-import { Spinner } from 'cli-spinner';
+
 import { ChildRelationship, Field, Rest, SalesforceFieldType, SFieldProperties, SObjectDescribe } from 'ts-force';
-import { ClassDeclaration, DecoratorStructure, JSDocStructure, PropertyDeclarationStructure, Scope, SourceFile } from 'ts-simple-ast';
-
+import { ClassDeclaration, DecoratorStructure, JSDocStructure, PropertyDeclarationStructure, Scope, SourceFile, ImportDeclarationStructure } from 'ts-simple-ast';
+import Ast from 'ts-simple-ast';
 import { SObjectConfig } from './sObjectConfig';
-import { cleanAPIName } from './util';
+import { cleanAPIName, replaceSource } from './util';
 
-const superClass = 'RestObject';
+export const TS_FORCE_IMPORTS: ImportDeclarationStructure = {
+    moduleSpecifier: 'ts-force',
+    namedImports: [
+        { name: 'Rest' },
+        { name: 'RestObject' },
+        { name: 'SObject' },
+        { name: 'sField' },
+        { name: 'SalesforceFieldType' },
+        { name: 'SFLocation' },
+        { name: 'SFieldProperties' },
+        { name: 'FieldResolver' },
+        { name: 'SOQLQueryParams' },
+        { name: 'buildQuery' },
+        { name: 'FieldProps' }
+    ]
+};
+
+const SUPER_CLASS = 'RestObject';
 
 interface SalesforceDecoratorProps {
     apiName: string;
@@ -21,83 +38,81 @@ interface SalesforceDecoratorProps {
 
 export class SObjectGenerator {
 
-    public sObjectConfigs: SObjectConfig[];
-    public classInterfaceMap: Map<string, string>;
-    public sourceFile: SourceFile;
-    public spinner: any;
+    private sObjectConfig: SObjectConfig;
+    private allConfigsMap: Map<string, SObjectConfig>;
+    private dependsOn: Set<string>;
+
+    private sourceFile: SourceFile;
+    private singleFileMode: boolean;
 
     private client;
-
+    private fieldsTypeAlias: string;
     /**
     * Generates RestObject Concrete types
     * @param {SourceFile} sourceFile: Location to save the files
     * @param {string[]} sObjectConfigs: Salesforce API Object Names to generate Classes for
     * @memberof SObjectGenerator
     */
-    constructor (sourceFile: SourceFile, sObjectConfigs: SObjectConfig[]) {
-        this.sObjectConfigs = sObjectConfigs;
-        this.classInterfaceMap = new Map<string,string>();
-        this.sourceFile = sourceFile;
+    constructor (out: string | SourceFile, sObjectConfig: SObjectConfig, allConfigs: SObjectConfig[]) {
+        const ast = new Ast();
+        this.sObjectConfig = sObjectConfig;
+
+        if (typeof out === 'string') {
+            this.sourceFile = replaceSource(out);
+            this.singleFileMode = false;
+        }else {
+            this.sourceFile = out;
+            this.singleFileMode = true;
+        }
+
         this.client = new Rest();
+        this.fieldsTypeAlias = `${sObjectConfig.className}Fields`;
+
+        this.allConfigsMap = new Map(
+            allConfigs.map<[string, SObjectConfig]>(x => [x.apiName.toLowerCase(), x])
+        );
+        this.dependsOn = new Set<string>();
+
     }
 
     public async generateFile () {
-        this.spinner = new Spinner({
-            text: 'warming up...',
-            stream: process.stderr,
-            onTick: function (msg) {
-                this.clearLine(this.stream);
-                this.stream.write(msg);
-            }
-        });
-        this.spinner.setSpinnerString(5);
-        this.spinner.setSpinnerDelay(20);
-        this.spinner.start();
 
         try {
-        // add imports
-        this.sourceFile.addImportDeclaration({
-            moduleSpecifier: 'ts-force',
-            namedImports: [
-                { name: 'Rest' },
-                { name: 'RestObject' },
-                { name: 'SObject' },
-                { name: 'sField' },
-                { name: 'SalesforceFieldType' },
-                { name: 'SFLocation' },
-                { name: 'SFieldProperties' },
-                { name: 'FieldResolver' },
-                { name: 'SOQLQueryParams' },
-                { name: 'buildQuery' }
-            ]
-        });
+            // add imports
 
-        for (let i = 0; i < this.sObjectConfigs.length; i++) {
-            let className = this.sanitizeClassName(this.sObjectConfigs[i]);
-            let interfaceName = this.generatePropInterfaceName(className);
-            this.classInterfaceMap.set(className, interfaceName);
-        }
+            this.sourceFile.addTypeAlias({
+                name: this.fieldsTypeAlias,
+                isExported: true, // to maintain backwords compat
+                type: `FieldProps<${this.sObjectConfig.className}>`
+            });
 
-        for (let i = 0; i < this.sObjectConfigs.length; i++) {
+            await this.generateSObjectClass(this.sObjectConfig);
 
-            await this.generateSObjectClass(this.sObjectConfigs[i]);
+            if (!this.singleFileMode) {
+                // ts-imports must be added by controlling process
+                this.sourceFile.addImportDeclaration(TS_FORCE_IMPORTS);
+                this.sourceFile.addImportDeclaration({
+                    moduleSpecifier: './',
+                    namedImports: [...this.dependsOn].filter(c => c !== this.sObjectConfig.className).map(c => {
+                        return { name: c };
+                    })
+                });
+            }
 
-        }
-        }catch (e) {
-            this.spinner.stop();
+        } catch (e) {
             throw e;
         }
-        this.spinner.stop();
+
+        return this.sourceFile;
     }
 
     // class generation
     public async generateSObjectClass (sobConfig: SObjectConfig): Promise<void> {
 
-        this.spinner.setSpinnerTitle(`Generating: ${sobConfig.apiName}`);
         let sobDescribe: SObjectDescribe;
         try {
             sobDescribe = await this.retrieveDescribe(sobConfig.apiName);
-        }catch (e) {
+        } catch (e) {
             throw new Error(`Could not retrieve describe metadata for ${sobConfig.apiName}. Check SObject spelling and authorization `);
         }
 
@@ -107,9 +122,7 @@ export class SObjectGenerator {
         props.push(...this.generateChildrenProps(sobConfig, sobDescribe.childRelationships));
         props.push(...this.generateFieldProps(sobConfig, sobDescribe.fields));
 
-        let className = this.sanitizeClassName(sobConfig);
-
-        this.generateInterface(className, props, sobConfig.apiName);
+        let className = this.sObjectConfig.className;
 
         let classDeclaration = this.generateClass(sobConfig, className, props);
 
@@ -132,17 +145,17 @@ export class SObjectGenerator {
             name: '_fields',
             scope: Scope.Private,
             isStatic: true,
-            type: `{[P in keyof ${this.classInterfaceMap.get(className)}]: SFieldProperties;}`
+            type: `{[P in keyof ${this.fieldsTypeAlias}]: SFieldProperties;}`
         });
 
         classDeclaration.addGetAccessor({
             name: 'FIELDS',
             scope: Scope.Public,
             isStatic: true,
-            bodyText: `return this._fields = this._fields ? this._fields : ${className}.getPropertiesMeta<${this.classInterfaceMap.get(className)},${className}>(${className})`
+            bodyText: `return this._fields = this._fields ? this._fields : ${className}.getPropertiesMeta<${this.fieldsTypeAlias},${className}>(${className})`
         });
 
-        const qryMethod = classDeclaration.addMethod({
+        classDeclaration.addMethod({
             name: 'retrieve',
             isStatic: true,
             scope: Scope.Public,
@@ -153,11 +166,11 @@ export class SObjectGenerator {
             isAsync: true,
             bodyText: `
             let qry = typeof qryParam === 'function' ? buildQuery(${className}, qryParam) : qryParam;
-            return await ${superClass}.query<${className}>(${className}, qry);
+            return await ${SUPER_CLASS}.query<${className}>(${className}, qry);
             `
         });
 
-        const fromSfMethod = classDeclaration.addMethod({
+        classDeclaration.addMethod({
             name: 'fromSFObject',
             isStatic: true,
             scope: Scope.Public,
@@ -169,60 +182,28 @@ export class SObjectGenerator {
         });
 
         classDeclaration.forget();
-
     }
 
-    private generateInterface (className: string, properties: PropertyDeclarationStructure[], apiName: string) {
-        let propsInterface = this.sourceFile.addInterface({
-            name: this.classInterfaceMap.get(className),
-            isExported: true,
-            docs: [{description: `Immutable Property Interface for ${className}` }]
-        });
-
-        propsInterface.addProperty({
-            name: '_TYPE_',
-            isReadonly: true,
-            hasQuestionToken: true,
-            type: `'${apiName}'`
-        });
-
-        properties.forEach(prop => {
-            // this is quite hackish and should be refactored ASAP
-            let isArr = false;
-            let pType = prop.type as string;
-            if (pType.indexOf('[]') > -1) {
-                isArr = true;
-                pType = pType.replace('[]','');
-            }
-            let interfaceType = this.classInterfaceMap.get(pType);
-            let ip = propsInterface.addProperty({
-                name: prop.name,
-                type: interfaceType ? (isArr ? `${interfaceType}[]` : interfaceType) : prop.type,
-                isReadonly: true,
-                hasQuestionToken: true
-            });
-        });
-
-        propsInterface.forget();
+    private async retrieveDescribe (apiName: string): Promise<SObjectDescribe> {
+        return await this.client.getSObjectDescribe(apiName);
     }
 
     private generateClass (sobConfig: SObjectConfig, className: string, props: PropertyDeclarationStructure[]): ClassDeclaration {
-        let propInterfaceName = this.classInterfaceMap.get(className);
 
         let classDeclaration = this.sourceFile.addClass({
             name: className,
-            extends: superClass,
+            extends: SUPER_CLASS,
             isExported: true,
             properties: props,
-            implements: [propInterfaceName],
-            docs: [{description: `Generated class for ${sobConfig.apiName}` }]
+            // implements: [propInterfaceName],
+            docs: [{ description: `Generated class for ${sobConfig.apiName}` }]
         });
 
         const interfaceParamName = 'fields';
         const constr = classDeclaration.addConstructor();
         constr.addParameter({
             name: interfaceParamName,
-            type: propInterfaceName,
+            type: this.fieldsTypeAlias,
             hasQuestionToken: true
         });
         constr.addParameter({
@@ -245,21 +226,6 @@ export class SObjectGenerator {
         return classDeclaration;
     }
 
-    private async retrieveDescribe (apiName: string): Promise<SObjectDescribe> {
-        return await this.client.getSObjectDescribe(apiName);
-    }
-
-    private generatePropInterfaceName (className: string) {
-        return `${className}Fields`;
-    }
-
-    private sanitizeClassName (sobConfig: SObjectConfig): string {
-        if (sobConfig.autoConvertNames) {
-            return cleanAPIName(sobConfig.apiName);
-        }
-        return sobConfig.apiName;
-    }
-
     private sanitizeProperty (sobConfig: SObjectConfig, apiName: string, reference: boolean): string {
         let fieldMapping;
         if (sobConfig.fieldMappings) {
@@ -270,10 +236,10 @@ export class SObjectGenerator {
 
         if (fieldMapping) {
             return fieldMapping.propName;
-        }else if (sobConfig.autoConvertNames) {
+        } else if (sobConfig.autoConvertNames) {
             let s = cleanAPIName(apiName);
             return apiName.charAt(0).toLowerCase() + s.slice(1) + (reference && !apiName.endsWith('Id') ? 'Id' : '');
-        }else {
+        } else {
             return apiName;
         }
     }
@@ -282,18 +248,19 @@ export class SObjectGenerator {
         let props = [];
         children.forEach(child => {
             try {
-                let relatedSobIndex = this.sObjectConfigs.findIndex(config => {
-                    return config.apiName.toLowerCase() === child.childSObject.toLowerCase();
-                });
+                let relatedSobConfig = this.allConfigsMap.get(child.childSObject.toLowerCase());
+
                 // don't generate if not in the list of types or ??
-                if (relatedSobIndex === -1
-                || child.childSObject === sobConfig.apiName
-                || child.deprecatedAndHidden === true
-                || child.relationshipName === null) {
+                if (!relatedSobConfig
+                    || child.childSObject === sobConfig.apiName
+                    || child.deprecatedAndHidden === true
+                    || child.relationshipName === null) {
                     return;
                 }
 
-                let referenceClass = this.sanitizeClassName(this.sObjectConfigs[relatedSobIndex]);
+                this.dependsOn.add(relatedSobConfig.className);
+
+                let referenceClass = relatedSobConfig.className;
 
                 let decoratorProps: SalesforceDecoratorProps = {
                     apiName: child.relationshipName,
@@ -315,7 +282,7 @@ export class SObjectGenerator {
                         this.generateDecorator(decoratorProps)
                     ]
                 });
-            }catch (e) {
+            } catch (e) {
                 throw e;
             }
         });
@@ -333,25 +300,21 @@ export class SObjectGenerator {
                     docs.push({ description: field.inlineHelpText });
                 }
 
-                let relatedSobIndex = this.sObjectConfigs.findIndex(config => {
-                    return config.apiName === field.referenceTo[0];
-                });
-
                 // only include reference types if we are also generating the referenced class
                 if (
-                    field.type === SalesforceFieldType.REFERENCE
-                    && (
-                        relatedSobIndex > -1
-                    )
-                    && field.relationshipName !== null
+                    field.referenceTo.length > 0 &&
+                    this.allConfigsMap.has(field.referenceTo[0].toLowerCase()) &&
+                    field.type === SalesforceFieldType.REFERENCE &&
+                    field.relationshipName !== null
                 ) {
-
+                    let relatedSobConfig = this.allConfigsMap.get(field.referenceTo[0].toLowerCase());
+                    this.dependsOn.add(relatedSobConfig.className);
                     let referenceClass: string;
 
                     if (field.referenceTo.length > 1) {
                         referenceClass = 'Name'; // polymorphic object
                     } else {
-                        referenceClass = this.sanitizeClassName(this.sObjectConfigs[relatedSobIndex]);
+                        referenceClass = relatedSobConfig.className;
                     }
 
                     let decoratorProps: SalesforceDecoratorProps = {
@@ -367,7 +330,7 @@ export class SObjectGenerator {
                     };
 
                     props.push({
-                        name: this.sanitizeProperty(this.sObjectConfigs[relatedSobIndex], field.relationshipName, false),
+                        name: this.sanitizeProperty(relatedSobConfig, field.relationshipName, false),
                         type: referenceClass,
                         scope: Scope.Public,
                         decorators: [
@@ -387,7 +350,7 @@ export class SObjectGenerator {
                 };
 
                 props.push(prop);
-            }catch (e) {
+            } catch (e) {
                 throw e;
             }
         });
@@ -443,9 +406,8 @@ export class SObjectGenerator {
         let sfType = decoratorProps.salesforceType ? `${this.mapTypeToEnum(decoratorProps.salesforceType)}` : 'undefined';
         let label = decoratorProps.salesforceLabel ? decoratorProps.salesforceLabel.replace(/'/g, "\\'") : '';
 
-        //  type ExchangeRates =
         let props: {
-            [P in keyof Omit<SFieldProperties, 'toString'>]: string;
+            [P in keyof Pick<SFieldProperties, Exclude<keyof SFieldProperties, 'toString'>>]: string;
         } = {
             apiName: `'${decoratorProps.apiName}'`,
             createable: `${decoratorProps.createable}`,
@@ -471,5 +433,3 @@ export class SObjectGenerator {
     }
 
 }
-
-type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;

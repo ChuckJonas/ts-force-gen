@@ -7,14 +7,18 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
-            "program": "${workspaceFolder}/build/src/index.js",
-            "outFiles": [
-                "${workspaceFolder}/**/*.js"
+            "name": "Launch Generator",
+            "protocol": "inspector",
+            "program": "${workspaceRoot}/src/index.ts",
+            "runtimeArgs": [
+                "--nolazy",
+                "-r",
+                "${workspaceRoot}/node_modules/ts-node/register"
             ],
-            "envFile": "${workspaceFolder}/.env.test",
+            "envFile": "${workspaceFolder}/.env",
+            "sourceMaps": true,
             "args": [
-                "-e", "-o", "${workspaceFolder}/tmps.cs", "-s", "Account,Contact"
+                "-e", "-o", "${workspaceFolder}/test/generated", "-s", "Account,Contact,Opportunity,OpportunityLineItem,User,Lead,Case"
             ],
         },
         {
@@ -25,7 +29,7 @@
             "args": [
                 "-r",
                 "dotenv/config",
-                "dotenv_config_path=.env.test",
+                "dotenv_config_path=.env",
                 "-r",
                 "ts-node/register",
                 "--timeout",
