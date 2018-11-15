@@ -137,6 +137,7 @@ export class SObjectGenerator {
         classDeclaration.addProperty({
             name: '_TYPE_',
             scope: Scope.Public,
+            isReadonly: true,
             type: `'${sobConfig.apiName}'`,
             initializer: `'${sobConfig.apiName}'`
         });
