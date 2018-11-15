@@ -1,5 +1,4 @@
 {
-  "extends": "./config/tsconfig.flexible", // also available: "./config/tsconfig.strict"
   "compilerOptions": {
     "target": "es5",
     "outDir": "build",
@@ -11,6 +10,7 @@
     "listFiles": false,
     "traceResolution": false,
     "experimentalDecorators": true,
+    "strictNullChecks": false,
     "pretty": true,
     "lib" : [
       "es6"
