@@ -381,6 +381,7 @@ export class SObjectGenerator {
                     name: this.sanitizeProperty(sobConfig, field.name, field.type === SalesforceFieldType.REFERENCE),
                     type: this.mapSObjectType(field.type),
                     scope: Scope.Public,
+                    isReadonly: !(field.createable || field.updateable),
                     decorators: [this.getDecorator(field)],
                     docs: docs
                 };
