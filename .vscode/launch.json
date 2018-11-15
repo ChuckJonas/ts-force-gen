@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/build/index.js",
+            "program": "${workspaceFolder}/build/src/index.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ],
@@ -16,6 +16,26 @@
             "args": [
                 "-e", "-o", "${workspaceFolder}/tmps.cs", "-s", "Account,Contact"
             ],
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mocha All",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "args": [
+                "-r",
+                "dotenv/config",
+                "dotenv_config_path=.env.test",
+                "-r",
+                "ts-node/register",
+                "--timeout",
+                "999999",
+                "--colors",
+                "${workspaceFolder}/test/**/*-spec.ts",
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "protocol": "inspector"
+        },
     ]
 }

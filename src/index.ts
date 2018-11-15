@@ -4,7 +4,6 @@ import { BaseConfig, OAuth, Rest, UsernamePasswordConfig, setDefaultConfig } fro
 import Ast from 'ts-simple-ast';
 import { SObjectGenerator } from './sObjectGenerator';
 import * as minimist from 'minimist';
-import * as path from 'path';
 import * as fs from 'fs';
 import { SObjectConfig } from './sObjectConfig';
 
@@ -26,6 +25,7 @@ interface Config {
 run();
 
 function run () {
+
     generateLoadConfig().then(config => {
         generate(config);
     }).catch(e => {
@@ -40,10 +40,13 @@ async function generateLoadConfig (): Promise<Config> {
     let args = minimist(process.argv.slice(2));
 
     let config: Config = {};
-    config.auth = {};
+
     let configPath = args.config || args.j;
     if (configPath) {
         config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+    if (!config.auth) {
+        config.auth = {};
     }
 
     // setup commandline args
@@ -109,7 +112,7 @@ async function generateLoadConfig (): Promise<Config> {
             await oAuth.initialize();
             config.auth = oAuth;
         }else {
-            throw new Error('No valid authinication configuration found!');
+            throw new Error('No valid authentication configuration found!');
         }
     }
 
@@ -124,7 +127,7 @@ function generate (config: Config) {
     const ast = new Ast();
     let save = true;
     if (config.outPath == null) {
-        config.outPath = './tmp.ts';
+        config.outPath = './placeholder.ts';
         save = false;
     }
     try {
@@ -153,11 +156,14 @@ function generate (config: Config) {
 
     gen.generateFile().then(() => {
         source.formatText();
-        console.log(source.getText());
+
         if (save) {
             source.save();
+        }else {
+            console.log(source.getText());
         }
     }).catch(error => {
         console.log(error);
+        process.exit(1);
     });
 }
