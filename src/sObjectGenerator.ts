@@ -47,7 +47,7 @@ export class SObjectGenerator {
     private client;
     private fieldsTypeAlias: string;
 
-    private pickLists: Map<string, [string, string][]>;
+    // private pickLists: Map<string, [string, string][]>;
     /**
     * Generates RestObject Concrete types
     * @param {SourceFile} sourceFile: Location to save the files
@@ -56,7 +56,7 @@ export class SObjectGenerator {
     */
     constructor (out: string | SourceFile, sObjectConfig: SObjectConfig, allConfigs: SObjectConfig[]) {
         this.sObjectConfig = sObjectConfig;
-        this.pickLists = new Map<string, [string, string][]>();
+        // this.pickLists = new Map<string, [string, string][]>();
         if (typeof out === 'string') {
             this.sourceFile = replaceSource(out);
             this.singleFileMode = false;
@@ -87,7 +87,7 @@ export class SObjectGenerator {
             });
 
             await this.generateSObjectClass(this.sObjectConfig);
-            this.generatePickistNamespace();
+            // this.generatePickistNamespace();
 
             if (!this.singleFileMode) {
                 // ts-imports must be added by controlling process
@@ -228,28 +228,27 @@ export class SObjectGenerator {
         return classDeclaration;
     }
 
-    private generatePickistNamespace () {
-        if (this.pickLists.size) {
-            let namespace = this.sourceFile.addNamespace({
-                name: this.sObjectConfig.className,
-                isExported: true
-            });
-            let picklists = namespace.addNamespace({
-                name: 'PICKLIST',
-                isExported: true
-            });
-            this.pickLists.forEach((values, field) => {
-                picklists.addEnums([
-                    {
-                        isExported: true,
-                        name: field,
-                        members: values.map(pv => ({name: pv[0], value: pv[1]}))
-                    }
-                ]);
-            });
-        }
-
-    }
+    // private generatePickistNamespace () {
+    //     if (this.pickLists.size) {
+    //         let namespace = this.sourceFile.addNamespace({
+    //             name: this.sObjectConfig.className,
+    //             isExported: true
+    //         });
+    //         let picklists = namespace.addNamespace({
+    //             name: 'PICKLIST',
+    //             isExported: true
+    //         });
+    //         this.pickLists.forEach((values, field) => {
+    //             picklists.addEnums([
+    //                 {
+    //                     isExported: true,
+    //                     name: field,
+    //                     members: values.map(pv => ({name: pv[0], value: pv[1]}))
+    //                 }
+    //             ]);
+    //         });
+    //     }
+    // }
 
     private sanitizeProperty (sobConfig: SObjectConfig, apiName: string, reference: boolean): string {
         let fieldMapping;
@@ -383,13 +382,13 @@ export class SObjectGenerator {
                     docs: docs
                 };
 
-                if (field.picklistValues.length) {
-                    this.pickLists.set(prop.name,
-                        field.picklistValues.map<[string, string]>(pv => {
-                            return [this.sanatizePicklistName(pv.label), pv.value];
-                        })
-                    );
-                }
+                // if (field.picklistValues.length) {
+                //     this.pickLists.set(prop.name,
+                //         field.picklistValues.map<[string, string]>(pv => {
+                //             return [this.sanatizePicklistName(pv.label), pv.value];
+                //         })
+                //     );
+                // }
 
                 props.push(prop);
             } catch (e) {
