@@ -1,7 +1,6 @@
 
 import { ChildRelationship, Field, Rest, SalesforceFieldType, SFieldProperties, SObjectDescribe } from 'ts-force';
 import { ClassDeclaration, DecoratorStructure, JSDocStructure, PropertyDeclarationStructure, Scope, SourceFile, ImportDeclarationStructure } from 'ts-simple-ast';
-import Ast from 'ts-simple-ast';
 import { SObjectConfig } from './sObjectConfig';
 import { cleanAPIName, replaceSource } from './util';
 
@@ -47,6 +46,8 @@ export class SObjectGenerator {
 
     private client;
     private fieldsTypeAlias: string;
+
+    private pickLists: Map<string, [string, string][]>;
     /**
     * Generates RestObject Concrete types
     * @param {SourceFile} sourceFile: Location to save the files
@@ -54,9 +55,8 @@ export class SObjectGenerator {
     * @memberof SObjectGenerator
     */
     constructor (out: string | SourceFile, sObjectConfig: SObjectConfig, allConfigs: SObjectConfig[]) {
-        const ast = new Ast();
         this.sObjectConfig = sObjectConfig;
-
+        this.pickLists = new Map<string, [string, string][]>();
         if (typeof out === 'string') {
             this.sourceFile = replaceSource(out);
             this.singleFileMode = false;
@@ -87,6 +87,7 @@ export class SObjectGenerator {
             });
 
             await this.generateSObjectClass(this.sObjectConfig);
+            this.generatePickistNamespace();
 
             if (!this.singleFileMode) {
                 // ts-imports must be added by controlling process
@@ -219,12 +220,35 @@ export class SObjectGenerator {
 
         let constructorBody = `super('${sobConfig.apiName}', client);
                             ${propsInit}
-                            Object.assign(this,${interfaceParamName});
+                            this.initObject(${interfaceParamName});
                             return new Proxy(this, this.safeUpdateProxyHandler);`;
 
         constr.setBodyText(constructorBody);
 
         return classDeclaration;
+    }
+
+    private generatePickistNamespace () {
+        if (this.pickLists.size) {
+            let namespace = this.sourceFile.addNamespace({
+                name: this.sObjectConfig.className,
+                isExported: true
+            });
+            let picklists = namespace.addNamespace({
+                name: 'PICKLIST',
+                isExported: true
+            });
+            this.pickLists.forEach((values, field) => {
+                picklists.addEnums([
+                    {
+                        isExported: true,
+                        name: field,
+                        members: values.map(pv => ({name: pv[0], value: pv[1]}))
+                    }
+                ]);
+            });
+        }
+
     }
 
     private sanitizeProperty (sobConfig: SObjectConfig, apiName: string, reference: boolean): string {
@@ -243,6 +267,15 @@ export class SObjectGenerator {
         } else {
             return apiName;
         }
+    }
+
+    private sanatizePicklistName (picklistLabel: string): string {
+        let name = picklistLabel.split(' ').join('_');
+        name = name.replace(/[^0-9a-z_]/gi, '');
+        if (Number.isInteger(Number(name.charAt(0)))) {
+            name = '_' + name;
+        }
+        return name.toUpperCase();
     }
 
     private generateChildrenProps (sobConfig: SObjectConfig, children: ChildRelationship[]): PropertyDeclarationStructure[] {
@@ -349,6 +382,14 @@ export class SObjectGenerator {
                     decorators: [this.getDecorator(field)],
                     docs: docs
                 };
+
+                if (field.picklistValues.length) {
+                    this.pickLists.set(prop.name,
+                        field.picklistValues.map<[string, string]>(pv => {
+                            return [this.sanatizePicklistName(pv.label), pv.value];
+                        })
+                    );
+                }
 
                 props.push(prop);
             } catch (e) {
